@@ -9,10 +9,17 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    html, body, #map {
+    html, body {
       height: 100%;
       margin: 0;
-      background-color: #1f2937; /* Fondo oscuro */
+      background-color: #111827;
+    }
+    #map-container {
+      position: relative;
+      height: 100%;
+    }
+    #map {
+      height: 100%;
     }
     #hud {
       position: absolute;
@@ -93,18 +100,20 @@
   </style>
 </head>
 <body class="bg-zinc-900 text-white">
-  <div id="map-title"></div>
-  <div id="hud" class="bg-zinc-700 p-4 rounded-xl shadow-xl w-full md:w-96">
-    <h2 class="text-xl font-bold mb-2">Indicadores por CCAA</h2>
-    <p class="text-sm mb-4 text-gray-300">Selecciona una categoría y un indicador para visualizar su distribución por comunidades autónomas. El mapa se actualizará con una escala de colores y valores correspondientes.</p>
-    <label class="block mb-2">Categoría</label>
-    <select id="categorySelect" class="w-full mb-4 p-2 rounded bg-zinc-600 text-white"></select>
-    <div id="indicatorList" class="space-y-2"></div>
-    <div id="indicatorInfo" class="text-sm text-gray-300 mt-4"></div>
-    <div id="legend" class="legend text-gray-300"></div>
-    <button onclick="downloadMap()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Descargar mapa</button>
+  <div id="map-container">
+    <div id="map-title"></div>
+    <div id="hud" class="bg-zinc-700 p-4 rounded-xl shadow-xl w-full md:w-96">
+      <h2 class="text-xl font-bold mb-2">Indicadores por CCAA</h2>
+      <p class="text-sm mb-4 text-gray-300">Selecciona una categoría y un indicador para visualizar su distribución por comunidades autónomas. El mapa se actualizará con una escala de colores y valores correspondientes.</p>
+      <label class="block mb-2">Categoría</label>
+      <select id="categorySelect" class="w-full mb-4 p-2 rounded bg-zinc-600 text-white"></select>
+      <div id="indicatorList" class="space-y-2"></div>
+      <div id="indicatorInfo" class="text-sm text-gray-300 mt-4"></div>
+      <div id="legend" class="legend text-gray-300"></div>
+      <button onclick="downloadMap()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Descargar mapa</button>
+    </div>
+    <div id="map"></div>
   </div>
-  <div id="map"></div>
 
   <script>
     const categories = {
@@ -160,9 +169,10 @@
     };
 
     const map = L.map('map').setView([40.3, -3.7], 6);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
       attribution: '',
-      subdomains: 'abcd', maxZoom: 19
+      subdomains: 'abcd',
+      maxZoom: 19
     }).addTo(map);
 
     const categorySelect = document.getElementById('categorySelect');
@@ -285,7 +295,7 @@
       hud.style.display = 'none';
       const title = document.getElementById('map-title');
       title.style.display = 'block';
-      html2canvas(document.querySelector("#map"), { useCORS: true }).then(canvas => {
+      html2canvas(document.querySelector("#map-container"), { useCORS: true }).then(canvas => {
         const link = document.createElement('a');
         link.download = 'mapa-indicador.png';
         link.href = canvas.toDataURL();
