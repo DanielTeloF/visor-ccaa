@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visor por CCAA - Indicadores</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    #map { height: 100vh; }
+    .leaflet-popup-content-wrapper {
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body class="bg-zinc-900 text-white">
+  <div class="absolute top-4 left-4 z-10 bg-zinc-800 p-4 rounded-xl shadow-xl w-80">
+    <h2 class="text-xl font-bold mb-2">Indicadores por CCAA</h2>
+    <label class="block mb-2 text-sm font-semibold">Área temática</label>
+    <select id="category" class="w-full p-2 rounded bg-zinc-700 text-white">
+      <option value="agricultura">🌾 Agricultura</option>
+      <option value="ganaderia">🐄 Ganadería</option>
+      <option value="medioambiente">🌳 Medio ambiente</option>
+      <option value="social">👥 Social</option>
+    </select>
+
+    <label class="block mt-4 mb-2 text-sm font-semibold">Indicador</label>
+    <select id="indicator" class="w-full p-2 rounded bg-zinc-700 text-white"></select>
+  </div>
+
+  <div id="map"></div>
+
+  <script>
+    const categories = {
+      agricultura: {
+        'Superficie_agricola_%': '% Superficie agrícola',
+        'Regadio_%': '% Regadío',
+        'Agricultura_ecológica_%': '% Agricultura ecológica',
+        'Producción_millones_agricultura': 'Producción agrícola (€M)'
+      },
+      ganaderia: {
+        'Bovino_cabezas': 'Cabezas bovino',
+        'Porcino_cabezas': 'Cabezas porcino',
+        'Ovino_cabezas': 'Cabezas ovino',
+        'Caprino_cabezas': 'Cabezas caprino',
+        'Ganadería_intensiva_%': '% Ganadería intensiva',
+        'Producción_millones_ganaderia': 'Producción ganadera (€M)'
+      },
+      medioambiente: {
+        'Cobertura_forestal_%': '% Cobertura forestal',
+        'Superficie_protegida': '% Superficie protegida',
+        'Ha_quemadas_ult_5_años': 'Ha quemadas (5 años)',
+        'Produccion_renovable_MW': 'Potencia renovable (MW)',
+        'Renovables_%_consumo': '% Consumo renovable'
+      },
+      social: {
+        'Poblacion': 'Población',
+        'Densidad_población': 'Densidad población',
+        'Tasa de desempleo': '% Desempleo',
+        'Tasa_riesgo_pobreza_%': '% Riesgo de pobreza',
+        'Precio_m2_vivienda_eur': '€/m² vivienda'
+      }
+    };
+
+    const indicatorSelect = document.getElementById('indicator');
+    const categorySelect = document.getElementById('category');
+
+    function updateIndicators() {
+      const selectedCategory = categorySelect.value;
+      indicatorSelect.innerHTML = '';
+      for (const key in categories[selectedCategory]) {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = categories[selectedCategory][key];
+        indicatorSelect.appendChild(opt);
+      }
+      updateMapStyle();
+    }
+
+    let map = L.map('map').setView([40.3, -3.7], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let geojsonLayer;
+    let dataByRegion = {};
+
+    fetch('data/recintos_Autonomicos.geojson')
+      .then(res => res.json())
+      .then(geojson => {
+        geojsonLayer = L.geoJSON(geojson, {
+          style: feature => styleFeature(feature),
+          onEachFeature: (feature, layer) => {
+            layer.bindPopup(`<strong>${feature.properties.NAMEUNIT}</strong><br/><span id="popup-val">Selecciona indicador</span>`);
+          }
+        }).addTo(map);
+        dataByRegion = geojson.features.reduce((acc, f) => {
+          acc[f.properties.NAMEUNIT] = f.properties;
+          return acc;
+        }, {});
+
+        updateIndicators();
+      });
+
+    function styleFeature(feature) {
+      const indicator = indicatorSelect.value;
+      const value = feature.properties[indicator];
+      return {
+        weight: 1,
+        color: '#222',
+        fillColor: getColor(value),
+        fillOpacity: 0.75
+      };
+    }
+
+    function getColor(d) {
+      return d > 75 ? '#006837' :
+             d > 50 ? '#31a354' :
+             d > 25 ? '#78c679' :
+             d > 10 ? '#c2e699' :
+             d >= 0 ? '#ffffcc' : '#ccc';
+    }
+
+    function updateMapStyle() {
+      geojsonLayer.eachLayer(layer => {
+        const style = styleFeature(layer.feature);
+        layer.setStyle(style);
+        const value = layer.feature.properties[indicatorSelect.value];
+        layer.setPopupContent(`<strong>${layer.feature.properties.NAMEUNIT}</strong><br/>${categories[categorySelect.value][indicatorSelect.value]}: <strong>${value ?? 'N/A'}</strong>`);
+      });
+    }
+
+    indicatorSelect.addEventListener('change', updateMapStyle);
+    categorySelect.addEventListener('change', updateIndicators);
+  </script>
+</body>
+</html>
