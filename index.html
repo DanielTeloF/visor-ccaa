@@ -235,12 +235,13 @@
       }).addTo(map);
 
       legend.innerHTML = `
-        <div class="legend-scale"></div>
-        <div class="legend-labels">
-          <span>${max.toFixed(2)}${unit}</span>
-          <span>${min.toFixed(2)}${unit}</span>
-        </div>
-      `;
+  <div class="legend-scale"></div>
+  <div class="legend-labels">
+    <span>${min.toFixed(2)}${unit}</span>
+    <span>${max.toFixed(2)}${unit}</span>
+  </div>
+`;
+
     }
 
     fetch('data/recintos_Autonomicos.geojson')
