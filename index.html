@@ -179,13 +179,24 @@
       const min = Math.min(...values), max = Math.max(...values);
 
       geojsonLayer = L.geoJSON(geojsonData, {
-        style: isCultivo ? {
-          fillColor: '#666',
-          weight: 1,
-          opacity: 1,
-          color: 'black',
-          fillOpacity: 0.3
-        } : styleFeatureFactory(min, max, selectedField),
+        style: function (feature) {
+          if (isCultivo) {
+            return {
+              fillColor: '#4b5563',
+              weight: 1,
+              color: 'black',
+              fillOpacity: 0.4,
+              opacity: 1
+            };
+          } else {
+            const value = parseValue(feature.properties[selectedField]);
+            const fill = !isNaN(value) ? getColorScale(min, max, value) : '#ccc';
+            return {
+              fillColor: fill,
+              weight: 1, opacity: 1, color: 'black', fillOpacity: 0.7
+            };
+          }
+        },
         onEachFeature: (feature, layer) => {
           const value = feature.properties[selectedField];
           const label = categories[categorySelect.value].fields[selectedField];
