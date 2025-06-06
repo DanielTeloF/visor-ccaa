@@ -61,6 +61,9 @@
       box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
       white-space: nowrap;
     }
+    path.leaflet-interactive {
+      transition: fill 0.4s ease;
+    }
   </style>
 </head>
 <body class="bg-zinc-900 text-white">
@@ -70,7 +73,9 @@
     <label class="block mb-2">Categoría</label>
     <select id="categorySelect" class="w-full mb-4 p-2 rounded bg-zinc-600 text-white"></select>
     <div id="indicatorList" class="space-y-2"></div>
+    <div id="indicatorInfo" class="text-sm text-gray-300 mt-4"></div>
     <div id="legend" class="legend text-gray-300"></div>
+    <button onclick="window.open(window.location.href, '_blank')" class="mt-4 text-blue-300 underline text-sm">Abrir visor en otra ventana para comparar</button>
   </div>
   <div id="map"></div>
 
@@ -135,6 +140,7 @@
 
     const categorySelect = document.getElementById('categorySelect');
     const indicatorList = document.getElementById('indicatorList');
+    const indicatorInfo = document.getElementById('indicatorInfo');
     const legend = document.getElementById('legend');
     let geojsonLayer, geojsonData, selectedField = null;
 
@@ -178,7 +184,7 @@
 
     function getColorScale(min, max, value) {
       const ratio = (value - min) / (max - min);
-      const start = [222, 235, 247], end = [49, 130, 189];
+      const start = [49, 130, 189], end = [222, 235, 247];
       const r = Math.round(start[0] + ratio * (end[0] - start[0]));
       const g = Math.round(start[1] + ratio * (end[1] - start[1]));
       const b = Math.round(start[2] + ratio * (end[2] - start[2]));
@@ -221,27 +227,28 @@
 
       const values = geojsonData.features.map(f => parseValue(f.properties[selectedField])).filter(v => !isNaN(v));
       const min = Math.min(...values), max = Math.max(...values);
-      const unit = getUnit(categories[categorySelect.value].fields[selectedField]);
+      const label = categories[categorySelect.value].fields[selectedField];
+      const unit = getUnit(label);
 
       geojsonLayer = L.geoJSON(geojsonData, {
         style: styleFeatureFactory(min, max, selectedField),
         onEachFeature: (feature, layer) => {
           const value = feature.properties[selectedField];
-          const label = categories[categorySelect.value].fields[selectedField];
           const tooltipText = `${feature.properties.CCAA}: ${value ?? 'N/A'}${unit}`;
           layer.bindTooltip(tooltipText, { permanent: false, direction: 'top', className: 'tooltip-custom' });
           layer.bindPopup(`<strong>${feature.properties.CCAA}</strong><br>${label}: <strong>${value ?? 'N/A'}${unit}</strong>`);
         }
       }).addTo(map);
 
-legend.innerHTML = `
-  <div class="legend-scale"></div>
-  <div class="legend-labels">
-    <span>${max.toFixed(2)}${unit}</span>
-    <span>${min.toFixed(2)}${unit}</span>
-  </div>
-`;
+      legend.innerHTML = `
+        <div class="legend-scale"></div>
+        <div class="legend-labels">
+          <span>${max.toFixed(2)}${unit}</span>
+          <span>${min.toFixed(2)}${unit}</span>
+        </div>
+      `;
 
+      indicatorInfo.innerHTML = `<strong>Indicador seleccionado:</strong> ${label}`;
     }
 
     fetch('data/recintos_Autonomicos.geojson')
@@ -253,3 +260,4 @@ legend.innerHTML = `
   </script>
 </body>
 </html>
+
