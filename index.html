@@ -36,14 +36,30 @@
     .legend {
       margin-top: 1rem;
       font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+    }
+    .legend-scale {
+      height: 150px;
+      width: 20px;
+      background: linear-gradient(to top, rgb(49,130,189), rgb(222,235,247));
+      margin-right: 0.5rem;
+      border-radius: 4px;
+    }
+    .legend-labels {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 150px;
     }
     .tooltip-custom {
       background: rgba(0, 0, 0, 0.8);
       color: #fff;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -174,6 +190,17 @@
       return parseFloat(String(raw).replace(',', '.').replace('%', '').trim());
     }
 
+    function getUnit(label) {
+      if (label.includes('%')) return '%';
+      if (label.includes('€M')) return ' Mill €';
+      if (label.includes('€/m²')) return ' €/m²';
+      if (label.includes('MW')) return ' MW';
+      if (label.includes('tn')) return ' tn';
+      if (label.includes('mm')) return ' mm';
+      if (label.includes('hab')) return ' hab';
+      return '';
+    }
+
     function styleFeatureFactory(min, max, field) {
       return function (feature) {
         const value = parseValue(feature.properties[field]);
@@ -194,19 +221,26 @@
 
       const values = geojsonData.features.map(f => parseValue(f.properties[selectedField])).filter(v => !isNaN(v));
       const min = Math.min(...values), max = Math.max(...values);
+      const unit = getUnit(categories[categorySelect.value].fields[selectedField]);
 
       geojsonLayer = L.geoJSON(geojsonData, {
         style: styleFeatureFactory(min, max, selectedField),
         onEachFeature: (feature, layer) => {
           const value = feature.properties[selectedField];
           const label = categories[categorySelect.value].fields[selectedField];
-          const tooltipText = `${feature.properties.CCAA}: ${value ?? 'N/A'}`;
+          const tooltipText = `${feature.properties.CCAA}: ${value ?? 'N/A'}${unit}`;
           layer.bindTooltip(tooltipText, { permanent: false, direction: 'top', className: 'tooltip-custom' });
-          layer.bindPopup(`<strong>${feature.properties.CCAA}</strong><br>${label}: <strong>${value ?? 'N/A'}</strong>`);
+          layer.bindPopup(`<strong>${feature.properties.CCAA}</strong><br>${label}: <strong>${value ?? 'N/A'}${unit}</strong>`);
         }
       }).addTo(map);
 
-      legend.innerHTML = `Escala: <strong>${min.toFixed(2)}</strong> → <strong>${max.toFixed(2)}</strong>`;
+      legend.innerHTML = `
+        <div class="legend-scale"></div>
+        <div class="legend-labels">
+          <span>${max.toFixed(2)}${unit}</span>
+          <span>${min.toFixed(2)}${unit}</span>
+        </div>
+      `;
     }
 
     fetch('data/recintos_Autonomicos.geojson')
@@ -218,4 +252,3 @@
   </script>
 </body>
 </html>
-
