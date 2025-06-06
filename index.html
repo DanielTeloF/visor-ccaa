@@ -1,142 +1,170 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Visor por CCAA - Indicadores</title>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
-  />
+  <meta charset="UTF-8">
+  <title>Visor por CCAA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    #map { height: 100vh; }
-    .leaflet-popup-content-wrapper {
-      font-size: 0.9rem;
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+    }
+    .leaflet-container {
+      background: #f0f0f0;
     }
   </style>
 </head>
 <body class="bg-zinc-900 text-white">
   <div class="absolute top-4 left-4 z-10 bg-zinc-800 p-4 rounded-xl shadow-xl w-80">
-    <h2 class="text-xl font-bold mb-2">Indicadores por CCAA</h2>
-    <label class="block mb-2 text-sm font-semibold">Área temática</label>
-    <select id="category" class="w-full p-2 rounded bg-zinc-700 text-white">
-      <option value="agricultura">🌾 Agricultura</option>
-      <option value="ganaderia">🐄 Ganadería</option>
-      <option value="medioambiente">🌳 Medio ambiente</option>
-      <option value="social">👥 Social</option>
-    </select>
+    <h2 class="text-xl font-bold mb-4">Indicadores por CCAA</h2>
+    <label class="block mb-2">Categoría</label>
+    <select id="categorySelect" class="w-full mb-4 p-2 rounded bg-zinc-700 text-white"></select>
 
-    <label class="block mt-4 mb-2 text-sm font-semibold">Indicador</label>
-    <select id="indicator" class="w-full p-2 rounded bg-zinc-700 text-white"></select>
+    <label class="block mb-2">Indicador</label>
+    <select id="indicatorSelect" class="w-full p-2 rounded bg-zinc-700 text-white"></select>
   </div>
-
+  
   <div id="map"></div>
 
   <script>
     const categories = {
       agricultura: {
-        'Superficie_agricola_%': '% Superficie agrícola',
-        'Regadio_%': '% Regadío',
-        'Agricultura_ecológica_%': '% Agricultura ecológica',
-        'Producción_millones_agricultura': 'Producción agrícola (€M)'
+        label: "🌾 Agricultura",
+        fields: {
+          "Superficie_agricola_%": "Superficie agrícola (%)",
+          "Regadio_%": "Regadío (%)",
+          "Cultivos_dominantes": "Cultivos dominantes",
+          "Agricultura_ecológica_%": "Agricultura ecológica (%)",
+          "Número_explotaciones": "N.º de explotaciones",
+          "Producción_millones_agricultura": "Producción (€M)"
+        }
       },
       ganaderia: {
-        'Bovino_cabezas': 'Cabezas bovino',
-        'Porcino_cabezas': 'Cabezas porcino',
-        'Ovino_cabezas': 'Cabezas ovino',
-        'Caprino_cabezas': 'Cabezas caprino',
-        'Ganadería_intensiva_%': '% Ganadería intensiva',
-        'Producción_millones_ganaderia': 'Producción ganadera (€M)'
+        label: "🐄 Ganadería",
+        fields: {
+          "Bovino_cabezas": "Cabezas de bovino",
+          "Porcino_cabezas": "Cabezas de porcino",
+          "Ovino_cabezas": "Cabezas de ovino",
+          "Caprino_cabezas": "Cabezas de caprino",
+          "Avicola_cabezas": "Cabezas avícolas",
+          "Ganadería_intensiva_%": "Ganadería intensiva (%)",
+          "Producción_millones_ganaderia": "Producción (€M)"
+        }
       },
       medioambiente: {
-        'Cobertura_forestal_%': '% Cobertura forestal',
-        'Superficie_protegida': '% Superficie protegida',
-        'Ha_quemadas_ult_5_años': 'Ha quemadas (5 años)',
-        'Produccion_renovable_MW': 'Potencia renovable (MW)',
-        'Renovables_%_consumo': '% Consumo renovable'
+        label: "🌳 Medioambiente",
+        fields: {
+          "Superficie_protegida": "Superficie protegida (%)",
+          "Cobertura_forestal_%": "Cobertura forestal (%)",
+          "Incendios_ult_5_años": "Incendios (últimos 5 años)",
+          "Ha_quemadas_ult_5_años": "Ha quemadas (últimos 5 años)",
+          "Produccion_renovable_MW": "Producción renovable (MW)",
+          "Renovables_%_consumo": "% renovables consumo",
+          "CO2_agro_estimado_tn": "CO₂ agro estimado (tn)",
+          "Balance_hidrico_mm": "Balance hídrico (mm)",
+          "Indice_calidad_aire": "Índice calidad aire"
+        }
       },
       social: {
-        'Poblacion': 'Población',
-        'Densidad_población': 'Densidad población',
-        'Tasa de desempleo': '% Desempleo',
-        'Tasa_riesgo_pobreza_%': '% Riesgo de pobreza',
-        'Precio_m2_vivienda_eur': '€/m² vivienda'
+        label: "👥 Social",
+        fields: {
+          "Poblacion": "Población",
+          "Densidad_población": "Densidad población",
+          "Porcentaje_estudios_superiores": "% estudios superiores",
+          "Medicos_por_1000hab": "Médicos por 1000 hab",
+          "Tasa de desempleo": "Tasa de desempleo",
+          "Tasa_riesgo_pobreza_%": "Riesgo de pobreza (%)",
+          "Precio_m2_vivienda_eur": "Precio vivienda €/m²"
+        }
       }
     };
 
-    const indicatorSelect = document.getElementById('indicator');
-    const categorySelect = document.getElementById('category');
-
-    function updateIndicators() {
-      const selectedCategory = categorySelect.value;
-      indicatorSelect.innerHTML = '';
-      for (const key in categories[selectedCategory]) {
-        const opt = document.createElement('option');
-        opt.value = key;
-        opt.textContent = categories[selectedCategory][key];
-        indicatorSelect.appendChild(opt);
-      }
-      updateMapStyle();
-    }
-
-    let map = L.map('map').setView([40.3, -3.7], 6);
+    const map = L.map('map').setView([40.3, -3.7], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    const categorySelect = document.getElementById('categorySelect');
+    const indicatorSelect = document.getElementById('indicatorSelect');
+
     let geojsonLayer;
-    let dataByRegion = {};
+    let geojsonData;
 
-    fetch('data/recintos_Autonomicos.geojson')
-      .then(res => res.json())
-      .then(geojson => {
-        geojsonLayer = L.geoJSON(geojson, {
-          style: feature => styleFeature(feature),
-          onEachFeature: (feature, layer) => {
-            layer.bindPopup(`<strong>${feature.properties.NAMEUNIT}</strong><br/><span id="popup-val">Selecciona indicador</span>`);
-          }
-        }).addTo(map);
-        dataByRegion = geojson.features.reduce((acc, f) => {
-          acc[f.properties.NAMEUNIT] = f.properties;
-          return acc;
-        }, {});
+    // Llenar el selector de categorías
+    for (const cat in categories) {
+      const option = document.createElement('option');
+      option.value = cat;
+      option.textContent = categories[cat].label;
+      categorySelect.appendChild(option);
+    }
 
-        updateIndicators();
-      });
+    categorySelect.addEventListener('change', () => {
+      updateIndicatorOptions();
+      updateMap();
+    });
+
+    indicatorSelect.addEventListener('change', updateMap);
+
+    function updateIndicatorOptions() {
+      indicatorSelect.innerHTML = '';
+      const selectedCategory = categorySelect.value;
+      const fields = categories[selectedCategory].fields;
+      for (const key in fields) {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = fields[key];
+        indicatorSelect.appendChild(opt);
+      }
+    }
+
+    function getColor(value) {
+      return value > 75 ? '#084081' :
+             value > 50 ? '#0868ac' :
+             value > 25 ? '#2b8cbe' :
+             value > 10 ? '#4eb3d3' :
+             value >= 0 ? '#7bccc4' : '#d0d1e6';
+    }
 
     function styleFeature(feature) {
-      const indicator = indicatorSelect.value;
-      const value = feature.properties[indicator];
+      const field = indicatorSelect.value;
+      const value = feature.properties[field];
       return {
-        weight: 1,
-        color: '#222',
         fillColor: getColor(value),
-        fillOpacity: 0.75
+        weight: 1,
+        opacity: 1,
+        color: 'black',
+        fillOpacity: 0.7
       };
     }
 
-    function getColor(d) {
-      return d > 75 ? '#006837' :
-             d > 50 ? '#31a354' :
-             d > 25 ? '#78c679' :
-             d > 10 ? '#c2e699' :
-             d >= 0 ? '#ffffcc' : '#ccc';
+    function updateMap() {
+      if (!geojsonData) return;
+      if (geojsonLayer) geojsonLayer.remove();
+
+      const selectedField = indicatorSelect.value;
+      const selectedLabel = indicatorSelect.options[indicatorSelect.selectedIndex].textContent;
+
+      geojsonLayer = L.geoJSON(geojsonData, {
+        style: styleFeature,
+        onEachFeature: (feature, layer) => {
+          const value = feature.properties[selectedField];
+          const label = `<strong>${feature.properties.CCAA}</strong><br>${selectedLabel}: <strong>${value ?? 'N/A'}</strong>`;
+          layer.bindPopup(label);
+        }
+      }).addTo(map);
     }
 
-    function updateMapStyle() {
-      geojsonLayer.eachLayer(layer => {
-        const style = styleFeature(layer.feature);
-        layer.setStyle(style);
-        const value = layer.feature.properties[indicatorSelect.value];
-        layer.setPopupContent(`<strong>${layer.feature.properties.NAMEUNIT}</strong><br/>${categories[categorySelect.value][indicatorSelect.value]}: <strong>${value ?? 'N/A'}</strong>`);
+    // Cargar el GeoJSON
+    fetch('data/recintos_Autonomicos.geojson')
+      .then(res => res.json())
+      .then(data => {
+        geojsonData = data;
+        updateIndicatorOptions();
+        updateMap();
       });
-    }
-
-    indicatorSelect.addEventListener('change', updateMapStyle);
-    categorySelect.addEventListener('change', updateIndicators);
   </script>
 </body>
 </html>
