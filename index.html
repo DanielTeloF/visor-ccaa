@@ -21,29 +21,41 @@
       background-color: #1d4ed8; font-weight: bold;
     }
     select {
-      background-color: #4b5563; /* bg-zinc-600 */
+      background-color: #4b5563;
       color: white;
       border: none;
     }
     select:focus {
       outline: none;
-      box-shadow: 0 0 0 2px #9ca3af; /* gris claro */
+      box-shadow: 0 0 0 2px #9ca3af;
     }
     select option {
-      background-color: #374151; /* bg-zinc-700 */
+      background-color: #374151;
       color: white;
+    }
+    .legend {
+      margin-top: 1rem;
+      font-size: 0.875rem;
+    }
+    .tooltip-custom {
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
     }
   </style>
 </head>
 <body class="bg-zinc-900 text-white">
-
-  <div id="hud" class="bg-zinc-700 p-4 rounded-xl shadow-xl w-96">
-    <h2 class="text-xl font-bold mb-4">Indicadores por CCAA</h2>
+  <div id="hud" class="bg-zinc-700 p-4 rounded-xl shadow-xl w-full md:w-96">
+    <h2 class="text-xl font-bold mb-2">Indicadores por CCAA</h2>
+    <p class="text-sm mb-4 text-gray-300">Selecciona una categoría y un indicador para visualizar su distribución por comunidades autónomas. El mapa se actualizará con una escala de colores y valores correspondientes.</p>
     <label class="block mb-2">Categoría</label>
     <select id="categorySelect" class="w-full mb-4 p-2 rounded bg-zinc-600 text-white"></select>
     <div id="indicatorList" class="space-y-2"></div>
+    <div id="legend" class="legend text-gray-300"></div>
   </div>
-
   <div id="map"></div>
 
   <script>
@@ -76,8 +88,8 @@
         fields: {
           "Superficie_protegida": "Superficie protegida (%)",
           "Cobertura_forestal_%": "Cobertura forestal (%)",
-          "Incendios_ult_5_años": "Incendios (últimos 5 años)",
-          "Ha_quemadas_ult_5_años": "Ha quemadas (últimos 5 años)",
+          "Incendios_ult_5_años": "Incendios (ult. 5 años)",
+          "Ha_quemadas_ult_5_años": "Ha quemadas (ult. 5 años)",
           "Produccion_renovable_MW": "Producción renovable (MW)",
           "Renovables_%_consumo": "% renovables consumo",
           "CO2_agro_estimado_tn": "CO₂ agro estimado (tn)",
@@ -107,20 +119,19 @@
 
     const categorySelect = document.getElementById('categorySelect');
     const indicatorList = document.getElementById('indicatorList');
+    const legend = document.getElementById('legend');
     let geojsonLayer, geojsonData, selectedField = null;
 
-    // Llenar el select con categorías
-for (const cat in categories) {
-  const option = document.createElement('option');
-  option.value = cat;
-  option.textContent = categories[cat].label;
-  categorySelect.appendChild(option);
-}
+    for (const cat in categories) {
+      const option = document.createElement('option');
+      option.value = cat;
+      option.textContent = categories[cat].label;
+      categorySelect.appendChild(option);
+    }
 
-categorySelect.value = 'agricultura';
-renderIndicatorButtons(); // 👈 AÑADE ESTA LÍNEA
-
-categorySelect.addEventListener('change', renderIndicatorButtons);
+    categorySelect.value = 'agricultura';
+    renderIndicatorButtons();
+    categorySelect.addEventListener('change', renderIndicatorButtons);
 
     function renderIndicatorButtons() {
       indicatorList.innerHTML = '';
@@ -143,11 +154,9 @@ categorySelect.addEventListener('change', renderIndicatorButtons);
         indicatorList.appendChild(btn);
       }
 
-      // Activar el primer botón automáticamente
       const firstKey = Object.keys(fields)[0];
       selectedField = firstKey;
-      const firstButton = indicatorList.querySelector(`[data-field="${firstKey}"]`);
-      if (firstButton) firstButton.classList.add('active');
+      indicatorList.querySelector(`[data-field="${firstKey}"]`).classList.add('active');
       updateMap();
     }
 
@@ -183,10 +192,7 @@ categorySelect.addEventListener('change', renderIndicatorButtons);
       if (!geojsonData || !selectedField) return;
       if (geojsonLayer) geojsonLayer.remove();
 
-      const values = geojsonData.features
-        .map(f => parseValue(f.properties[selectedField]))
-        .filter(v => !isNaN(v));
-
+      const values = geojsonData.features.map(f => parseValue(f.properties[selectedField])).filter(v => !isNaN(v));
       const min = Math.min(...values), max = Math.max(...values);
 
       geojsonLayer = L.geoJSON(geojsonData, {
@@ -194,17 +200,20 @@ categorySelect.addEventListener('change', renderIndicatorButtons);
         onEachFeature: (feature, layer) => {
           const value = feature.properties[selectedField];
           const label = categories[categorySelect.value].fields[selectedField];
+          const tooltipText = `${feature.properties.CCAA}: ${value ?? 'N/A'}`;
+          layer.bindTooltip(tooltipText, { permanent: false, direction: 'top', className: 'tooltip-custom' });
           layer.bindPopup(`<strong>${feature.properties.CCAA}</strong><br>${label}: <strong>${value ?? 'N/A'}</strong>`);
         }
       }).addTo(map);
+
+      legend.innerHTML = `Escala: <strong>${min.toFixed(2)}</strong> → <strong>${max.toFixed(2)}</strong>`;
     }
 
-    // Cargar datos y mostrar la categoría por defecto
     fetch('data/recintos_Autonomicos.geojson')
       .then(res => res.json())
       .then(data => {
         geojsonData = data;
-        renderIndicatorButtons(); // Mostrar botones desde el inicio
+        renderIndicatorButtons();
       });
   </script>
 </body>
