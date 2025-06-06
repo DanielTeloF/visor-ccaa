@@ -234,11 +234,11 @@
         }
       }).addTo(map);
 
-      legend.innerHTML = `
+legend.innerHTML = `
   <div class="legend-scale"></div>
   <div class="legend-labels">
-    <span>${min.toFixed(2)}${unit}</span>
     <span>${max.toFixed(2)}${unit}</span>
+    <span>${min.toFixed(2)}${unit}</span>
   </div>
 `;
 
