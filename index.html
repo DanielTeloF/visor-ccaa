@@ -119,6 +119,8 @@
       categorySelect.appendChild(option);
     }
 
+    categorySelect.value = 'agricultura';
+
     categorySelect.addEventListener('change', () => {
       updateIndicatorOptions();
       updateMap();
@@ -138,39 +140,47 @@
       }
     }
 
-    function getColor(value) {
-      return value > 75 ? '#084081' :
-             value > 50 ? '#0868ac' :
-             value > 25 ? '#2b8cbe' :
-             value > 10 ? '#4eb3d3' :
-             value >= 0 ? '#7bccc4' : '#d0d1e6';
+    function getColorScale(min, max, value) {
+      const ratio = (value - min) / (max - min);
+      const startColor = [222, 235, 247]; // light blue
+      const endColor = [49, 130, 189];   // dark blue
+      const r = Math.round(startColor[0] + ratio * (endColor[0] - startColor[0]));
+      const g = Math.round(startColor[1] + ratio * (endColor[1] - startColor[1]));
+      const b = Math.round(startColor[2] + ratio * (endColor[2] - startColor[2]));
+      return `rgb(${r},${g},${b})`;
     }
 
-    function styleFeature(feature) {
-      const field = indicatorSelect.value;
-      const value = feature.properties[field];
-      return {
-        fillColor: getColor(value),
-        weight: 1,
-        opacity: 1,
-        color: 'black',
-        fillOpacity: 0.7
-      };
+    function styleFeatureFactory(min, max, field) {
+      return function(feature) {
+        const value = feature.properties[field];
+        const fill = (typeof value === 'number') ? getColorScale(min, max, value) : '#ccc';
+        return {
+          fillColor: fill,
+          weight: 1,
+          opacity: 1,
+          color: 'black',
+          fillOpacity: 0.7
+        };
+      }
     }
 
     function updateMap() {
       if (!geojsonData) return;
       if (geojsonLayer) geojsonLayer.remove();
 
-      const selectedField = indicatorSelect.value;
-      const selectedLabel = indicatorSelect.options[indicatorSelect.selectedIndex].textContent;
+      const field = indicatorSelect.value;
+      const label = indicatorSelect.options[indicatorSelect.selectedIndex].textContent;
+
+      const values = geojsonData.features.map(f => f.properties[field]).filter(v => typeof v === 'number');
+      const min = Math.min(...values);
+      const max = Math.max(...values);
 
       geojsonLayer = L.geoJSON(geojsonData, {
-        style: styleFeature,
+        style: styleFeatureFactory(min, max, field),
         onEachFeature: (feature, layer) => {
-          const value = feature.properties[selectedField];
-          const label = `<strong>${feature.properties.CCAA}</strong><br>${selectedLabel}: <strong>${value ?? 'N/A'}</strong>`;
-          layer.bindPopup(label);
+          const value = feature.properties[field];
+          const popup = `<strong>${feature.properties.CCAA}</strong><br>${label}: <strong>${value ?? 'N/A'}</strong>`;
+          layer.bindPopup(popup);
         }
       }).addTo(map);
     }
