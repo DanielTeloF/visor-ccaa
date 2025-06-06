@@ -9,17 +9,34 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    html, body, #map { height: 100%; margin: 0; }
-    #hud { position: absolute; top: 1rem; right: 1rem; z-index: 1000; }
-    .indicator-button {
-      display: block; width: 100%; text-align: left;
-      padding: 0.5rem 1rem; border-radius: 0.375rem;
-      background-color: #4b5563; color: white;
-      cursor: pointer; transition: background 0.3s ease;
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+      background-color: #1f2937; /* Fondo oscuro */
     }
-    .indicator-button:hover { background-color: #6b7280; }
+    #hud {
+      position: absolute;
+      top: 1rem;
+      left: 1.5rem;
+      z-index: 1000;
+    }
+    .indicator-button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      background-color: #4b5563;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .indicator-button:hover {
+      background-color: #6b7280;
+    }
     .indicator-button.active {
-      background-color: #1d4ed8; font-weight: bold;
+      background-color: #1d4ed8;
+      font-weight: bold;
     }
     select {
       background-color: #4b5563;
@@ -62,12 +79,21 @@
       box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
       white-space: nowrap;
     }
-    path.leaflet-interactive {
-      transition: fill 0.5s ease-in-out;
+    #map-title {
+      position: absolute;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 900;
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: white;
+      text-shadow: 1px 1px 4px rgba(0,0,0,0.7);
     }
   </style>
 </head>
 <body class="bg-zinc-900 text-white">
+  <div id="map-title"></div>
   <div id="hud" class="bg-zinc-700 p-4 rounded-xl shadow-xl w-full md:w-96">
     <h2 class="text-xl font-bold mb-2">Indicadores por CCAA</h2>
     <p class="text-sm mb-4 text-gray-300">Selecciona una categoría y un indicador para visualizar su distribución por comunidades autónomas. El mapa se actualizará con una escala de colores y valores correspondientes.</p>
@@ -143,6 +169,7 @@
     const indicatorList = document.getElementById('indicatorList');
     const indicatorInfo = document.getElementById('indicatorInfo');
     const legend = document.getElementById('legend');
+    const mapTitle = document.getElementById('map-title');
     let geojsonLayer, geojsonData, selectedField = null;
 
     for (const cat in categories) {
@@ -250,17 +277,21 @@
       `;
 
       indicatorInfo.innerHTML = `<strong>Indicador seleccionado:</strong> ${label}`;
+      mapTitle.innerText = label;
     }
 
     function downloadMap() {
       const hud = document.getElementById('hud');
       hud.style.display = 'none';
+      const title = document.getElementById('map-title');
+      title.style.display = 'block';
       html2canvas(document.querySelector("#map"), { useCORS: true }).then(canvas => {
         const link = document.createElement('a');
         link.download = 'mapa-indicador.png';
         link.href = canvas.toDataURL();
         link.click();
         hud.style.display = '';
+        title.style.display = '';
       });
     }
 
