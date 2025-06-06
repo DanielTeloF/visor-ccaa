@@ -6,16 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    html, body, #map { height: 100%; margin: 0; overflow: hidden; }
+    html, body, #map { height: 100%; margin: 0; }
     #hud { position: absolute; top: 1rem; left: 1rem; z-index: 1000; }
     .indicator-button {
       display: block; width: 100%; text-align: left;
       padding: 0.5rem 1rem; border-radius: 0.375rem;
       background-color: #4b5563; color: white;
-      cursor: pointer; transition: background 0.3s ease-in-out;
+      cursor: pointer; transition: background 0.3s ease;
     }
     .indicator-button:hover { background-color: #6b7280; }
     .indicator-button.active {
@@ -63,7 +62,7 @@
       white-space: nowrap;
     }
     path.leaflet-interactive {
-      transition: fill 0.8s ease-in-out;
+      transition: fill 0.5s ease-in-out;
     }
   </style>
 </head>
@@ -76,7 +75,6 @@
     <div id="indicatorList" class="space-y-2"></div>
     <div id="indicatorInfo" class="text-sm text-gray-300 mt-4"></div>
     <div id="legend" class="legend text-gray-300"></div>
-    <button onclick="downloadMap()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Descargar mapa</button>
   </div>
   <div id="map"></div>
 
@@ -110,8 +108,8 @@
         fields: {
           "Superficie_protegida": "Superficie protegida (%)",
           "Cobertura_forestal_%": "Cobertura forestal (%)",
-          "Incendios_ult_5_años": "Incendios (ult. 5 años)",
-          "Ha_quemadas_ult_5_años": "Ha quemadas (ult. 5 años)",
+          "Incendios_ult_5_años": "Incendios (últimos 5 años)",
+          "Ha_quemadas_ult_5_años": "Ha quemadas (últimos 5 años)",
           "Produccion_renovable_MW": "Producción renovable (MW)",
           "Renovables_%_consumo": "% renovables consumo",
           "CO2_agro_estimado_tn": "CO₂ agro estimado (tn)",
@@ -133,20 +131,10 @@
       }
     };
 
-    const map = L.map('map', {
-      zoomControl: false,
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      boxZoom: false,
-      keyboard: false
-    }).setView([40.3, -3.7], 6);
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-      attribution: '',
-      subdomains: 'abcd',
-      maxZoom: 6,
-      minZoom: 6
+    const map = L.map('map').setView([40.3, -3.7], 6);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 19
     }).addTo(map);
 
     const categorySelect = document.getElementById('categorySelect');
@@ -246,7 +234,8 @@
         onEachFeature: (feature, layer) => {
           const value = feature.properties[selectedField];
           const tooltipText = `${feature.properties.CCAA}: ${value ?? 'N/A'}${unit}`;
-          layer.bindTooltip(tooltipText, { permanent: true, direction: 'center', className: 'tooltip-custom' });
+          layer.bindTooltip(tooltipText, { permanent: false, direction: 'top', className: 'tooltip-custom' });
+          layer.bindPopup(`<strong>${feature.properties.CCAA}</strong><br>${label}: <strong>${value ?? 'N/A'}${unit}</strong>`);
         }
       }).addTo(map);
 
@@ -261,15 +250,6 @@
       indicatorInfo.innerHTML = `<strong>Indicador seleccionado:</strong> ${label}`;
     }
 
-    function downloadMap() {
-      html2canvas(document.querySelector("#map"), { useCORS: true }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = 'mapa-indicador.png';
-        link.href = canvas.toDataURL();
-        link.click();
-      });
-    }
-
     fetch('data/recintos_Autonomicos.geojson')
       .then(res => res.json())
       .then(data => {
@@ -279,4 +259,3 @@
   </script>
 </body>
 </html>
-
