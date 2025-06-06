@@ -10,6 +10,10 @@
   <style>
     html, body, #map { height: 100%; margin: 0; }
     #hud { position: absolute; top: 1rem; left: 1rem; z-index: 1000; }
+    select {
+      background-color: #4b5563 !important;
+      color: white !important;
+    }
     .indicator-button {
       display: block; width: 100%; text-align: left;
       padding: 0.5rem 1rem; border-radius: 0.375rem;
@@ -20,6 +24,9 @@
     .indicator-button.active {
       background-color: #1d4ed8; font-weight: bold;
     }
+    .cultivo-icon {
+      font-size: 24px;
+    }
   </style>
 </head>
 <body class="bg-zinc-900 text-white">
@@ -27,7 +34,7 @@
   <div id="hud" class="bg-zinc-700 p-4 rounded-xl shadow-xl w-96">
     <h2 class="text-xl font-bold mb-4">Indicadores por CCAA</h2>
     <label class="block mb-2">Categoría</label>
-    <select id="categorySelect" class="w-full mb-4 p-2 rounded bg-zinc-600 text-white"></select>
+    <select id="categorySelect" class="w-full mb-4 p-2 rounded"></select>
     <div id="indicatorList" class="space-y-2"></div>
   </div>
 
@@ -86,15 +93,25 @@
       }
     };
 
+    const cultivoEmojis = {
+      "cereales": "🌾",
+      "olivar": "🫒",
+      "viñedo": "🍇",
+      "hortalizas": "🥕",
+      "frutales": "🍎",
+      "otros": "❓"
+    };
+
     const map = L.map('map').setView([40.3, -3.7], 6);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href=\"https://carto.com/attributions\">CARTO</a>',
+      attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>',
       subdomains: 'abcd', maxZoom: 19
     }).addTo(map);
 
     const categorySelect = document.getElementById('categorySelect');
     const indicatorList = document.getElementById('indicatorList');
     let geojsonLayer, geojsonData, selectedField = null;
+    let cultivoMarkers = [];
 
     for (const cat in categories) {
       const option = document.createElement('option');
@@ -129,7 +146,7 @@
 
       const firstKey = Object.keys(fields)[0];
       selectedField = firstKey;
-      indicatorList.querySelector(`[data-field=\"${firstKey}\"]`).classList.add('active');
+      indicatorList.querySelector(`[data-field="${firstKey}"]`).classList.add('active');
       updateMap();
     }
 
@@ -147,33 +164,50 @@
       return parseFloat(String(raw).replace(',', '.').replace('%', '').trim());
     }
 
-    function styleFeatureFactory(min, max, field) {
-      return function (feature) {
-        const value = parseValue(feature.properties[field]);
-        const fill = !isNaN(value) ? getColorScale(min, max, value) : '#ccc';
-        return {
-          fillColor: fill,
-          weight: 1, opacity: 1, color: 'black', fillOpacity: 0.7
-        };
-      };
+    function clearCultivoMarkers() {
+      cultivoMarkers.forEach(m => map.removeLayer(m));
+      cultivoMarkers = [];
     }
 
     function updateMap() {
       if (!geojsonData || !selectedField) return;
       if (geojsonLayer) geojsonLayer.remove();
+      clearCultivoMarkers();
 
-      const values = geojsonData.features
-        .map(f => parseValue(f.properties[selectedField]))
-        .filter(v => !isNaN(v));
-
+      const isCultivo = selectedField === 'Cultivos_dominantes';
+      const values = geojsonData.features.map(f => parseValue(f.properties[selectedField])).filter(v => !isNaN(v));
       const min = Math.min(...values), max = Math.max(...values);
 
       geojsonLayer = L.geoJSON(geojsonData, {
-        style: styleFeatureFactory(min, max, selectedField),
+        style: isCultivo ? {
+          fillColor: '#666',
+          weight: 1,
+          opacity: 1,
+          color: 'black',
+          fillOpacity: 0.3
+        } : styleFeatureFactory(min, max, selectedField),
         onEachFeature: (feature, layer) => {
           const value = feature.properties[selectedField];
           const label = categories[categorySelect.value].fields[selectedField];
           layer.bindPopup(`<strong>${feature.properties.CCAA}</strong><br>${label}: <strong>${value ?? 'N/A'}</strong>`);
+
+          if (isCultivo) {
+            const cultivo = String(value || '').toLowerCase();
+            let emoji = cultivoEmojis.otros;
+            for (const clave in cultivoEmojis) {
+              if (cultivo.includes(clave)) {
+                emoji = cultivoEmojis[clave];
+                break;
+              }
+            }
+            const center = layer.getBounds().getCenter();
+            const icon = L.divIcon({
+              className: 'cultivo-icon',
+              html: emoji
+            });
+            const marker = L.marker(center, { icon }).addTo(map);
+            cultivoMarkers.push(marker);
+          }
         }
       }).addTo(map);
     }
